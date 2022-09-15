@@ -1,0 +1,40 @@
+[Device]
+Family=machxo2
+PartType=LCMXO2-1200ZE
+PartName=LCMXO2-1200ZE-1TG100C
+SpeedGrade=1
+Package=TQFP100
+OperatingCondition=COM
+Status=S
+
+[IP]
+VendorName=Lattice Semiconductor Corporation
+CoreType=LPM
+CoreStatus=Demo
+CoreName=Distributed_ROM
+CoreRevision=2.8
+ModuleName=P3038DM_PWMAP
+SourceFormat=VHDL
+ParameterFileVersion=1.0
+Date=06/15/2021
+Time=14:16:40
+
+[Parameters]
+Verilog=0
+VHDL=1
+EDIF=1
+Destination=Synplicity
+Expression=BusA(0 to 7)
+Order=Big Endian [MSB:LSB]
+IO=0
+Addresses=256
+Data=8
+LUT=0
+MemFile=c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem
+MemFormat=hex
+
+[FilesGenerated]
+c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem=mem
+
+[Command]
+cmd_line= -w -n P3038DM_PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -dram -type romblk -addr_width 8 -num_words 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem -memformat hex
