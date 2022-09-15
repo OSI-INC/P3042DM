@@ -11,18 +11,18 @@
 -- message_data as a standard logic vector. We confirm that message_id is being received correctly with a
 -- lamp dedicated to one particular channel.
 
--- Version 04, 19-APR-21. Add Data Upstream Bus (DUB), Data Downstream Bus (DDB), and Detector Control Bus (DCB).
+-- Version A04, 19-APR-21. Add Data Upstream Bus (DUB), Data Downstream Bus (DDB), and Detector Control Bus (DCB).
 -- and implement the global flags the detector modules share for power measurement and readout. We find that the
 -- message detector does not work when we compile with the Lattice synthesizer. We must use the Synplify Pro
 -- synthesizer. We add the message fifo and write messages into it. Our red lamp, LED2, indicates that the
 -- fifo is full.
 
--- Version 05, 20-APR-21. Complete a draft of the entire functionality, including storing incoming messages in
+-- Version A05, 20-APR-21. Complete a draft of the entire functionality, including storing incoming messages in
 -- the FIFO, reading them out, and arranging the output bytes over the daisy-chained eight-bit detector module
 -- bus. We have the FIFO implemented in LUTs. It is 16 thirty-two-bit message records, each containing an ID,
 -- HI and LO bytes, and power byte.
 
--- Version 06, 10-MAY-21. Improve indicator implementation for HIDE and SHOW. Use rising edge of CK to clock
+-- Version A06, 10-MAY-21. Improve indicator implementation for HIDE and SHOW. Use rising edge of CK to clock
 -- message writes to FIFO as well as reads from, thus allowing us 25 ns from a write to the next read rather
 -- than 12.5 ns. Implement power display look-up table in distributed ROM. Discover that we are not clocking
 -- the final bit out of the ADC, so correct power readout and check response with transmitter and looking at
@@ -35,7 +35,7 @@
 -- of whether its decoder had received the message or not. Add a 100-ms timer to the power indicator so that
 -- it turns off in the absence of new samples.
 
--- Version 07, 31-MAY-21. Update power indication only when at least one detector receives a complete message.
+-- Version A07, 31-MAY-21. Update power indication only when at least one detector receives a complete message.
 -- Remove the expiration of power measurement to simplify the code while lookig for bugs. Synchronize the
 -- control signals with respect to the rising edge of CK rather than FCK to remove timing and metastability
 -- problems we observed through examination of the power readout state machine. Increase hysteresis on 
@@ -43,9 +43,11 @@
 -- this value is zero. Remove 80 MHz clock and instead use DMCK with PLL to make 40 MHz. We add a PLL lock
 -- error to the possible sources of DMERR.
 
--- Version 08, 15-JUN-21. Assign test pin outputs. Improve power indicator map. Fix vulnerability of state
+-- Version A08, 15-JUN-21. Assign test pin outputs. Improve power indicator map. Fix vulnerability of state
 -- machines to glitches in GRCV and GINC that occur when we assert outputs as soon as we see either signal
 -- unasserted. In particular, when a test point is asserted on !GINC, we can induce a spike in GINC.
+
+-- V8.1, 15-SEP-22. Create Git repository. No change in functionality, identical to A08.
 
 -- Global Constantslibrary ieee;  
 library ieee;  
