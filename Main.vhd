@@ -2,52 +2,8 @@
 
 -- Compile with Synplify Pro. The message decoder fails if compiled with the Lattice synthesizer.
 
--- Version A01, 01-JAN-21, Translate message decoder from ABEL to VHDL. Add code to flash indicator lights when
--- receiving and message ready. 
-
--- Version A02, 12-JAN-21, Switch to 80 MHz clock input.
-
--- Version A03, 16-APR-21. Separate detector from main code. Detector provides message_id as an integer and
--- message_data as a standard logic vector. We confirm that message_id is being received correctly with a
--- lamp dedicated to one particular channel.
-
--- Version A04, 19-APR-21. Add Data Upstream Bus (DUB), Data Downstream Bus (DDB), and Detector Control Bus (DCB).
--- and implement the global flags the detector modules share for power measurement and readout. We find that the
--- message detector does not work when we compile with the Lattice synthesizer. We must use the Synplify Pro
--- synthesizer. We add the message fifo and write messages into it. Our red lamp, LED2, indicates that the
--- fifo is full.
-
--- Version A05, 20-APR-21. Complete a draft of the entire functionality, including storing incoming messages in
--- the FIFO, reading them out, and arranging the output bytes over the daisy-chained eight-bit detector module
--- bus. We have the FIFO implemented in LUTs. It is 16 thirty-two-bit message records, each containing an ID,
--- HI and LO bytes, and power byte.
-
--- Version A06, 10-MAY-21. Improve indicator implementation for HIDE and SHOW. Use rising edge of CK to clock
--- message writes to FIFO as well as reads from, thus allowing us 25 ns from a write to the next read rather
--- than 12.5 ns. Implement power display look-up table in distributed ROM. Discover that we are not clocking
--- the final bit out of the ADC, so correct power readout and check response with transmitter and looking at
--- duty cycle of the power indicator lamp. Assign lamps with constants and make the blue lamp the power
--- indicator, because we find it is much more visible than the white. Changed the board power indicator to 
--- a run indicator that reduces the intensity of the green lamp at the same time as requiring the clocks to
--- turn on. Enhance the red error lamp so it gives a short flash for FIFO full erro and a longer flash for 
--- empty error. We have 10 kHz SLWCK and 10 Hz LCK. We update the decoder, correcting its reset behavior
--- and removing the CNT signal. Our message recorder resets the decoder after it stores a message, regardless
--- of whether its decoder had received the message or not. Add a 100-ms timer to the power indicator so that
--- it turns off in the absence of new samples.
-
--- Version A07, 31-MAY-21. Update power indication only when at least one detector receives a complete message.
--- Remove the expiration of power measurement to simplify the code while lookig for bugs. Synchronize the
--- control signals with respect to the rising edge of CK rather than FCK to remove timing and metastability
--- problems we observed through examination of the power readout state machine. Increase hysteresis on 
--- tri-state inputs. Add power calibration parameter that we subtract from the raw power measurement. For now
--- this value is zero. Remove 80 MHz clock and instead use DMCK with PLL to make 40 MHz. We add a PLL lock
--- error to the possible sources of DMERR.
-
--- Version A08, 15-JUN-21. Assign test pin outputs. Improve power indicator map. Fix vulnerability of state
--- machines to glitches in GRCV and GINC that occur when we assert outputs as soon as we see either signal
--- unasserted. In particular, when a test point is asserted on !GINC, we can induce a spike in GINC.
-
--- V8.1, 15-SEP-22. Create Git repository. No change in functionality, identical to A08.
+-- [18-NOV-22] Copy A3038DM v8.1, make file names generic. Tag as A3042DM v1.1, could be used in
+-- the A3038DM.
 
 -- Global Constantslibrary ieee;  
 library ieee;  
