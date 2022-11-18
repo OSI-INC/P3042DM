@@ -1,4 +1,4 @@
--- <pre> Radio-Frequency Detector Module (A3038DM) Firmware, Toplevel Unit
+-- <pre> Radio-Frequency Detector Module (A3042DM) Firmware, Toplevel Unit
 
 -- Compile with Synplify Pro. The message decoder fails if compiled with the Lattice synthesizer.
 
@@ -125,7 +125,7 @@ architecture behavior of main is
 begin
 	-- The message decoder runs off 40 MHz. We receive 8 MHz on DMCK and use 
 	-- a PLL to multiply to 40 MHz.
-	Clock : entity P3038DM_PLL port map (
+	Clock : entity PLL port map (
 		CLKI => DMCK,
 		CLKOP => CK,
 		LOCK => LOCK
@@ -292,7 +292,7 @@ begin
 	-- to prepare for WrClock. The logic chip requires 11.4 ns setup. On the
 	-- read, we set up RdEn on the falling edge and read on the rising edge
 	-- of CK, which again allows 12.5 ns setup where 11.7 ns is required.
-	Message_FIFO : entity P3038DM_FIFO port map (
+	Message_FIFO : entity FIFO port map (
 		Data => received_record,
         WrClock => CK,
         RdClock => CK,
@@ -724,7 +724,7 @@ begin
 
 	-- Power Indicator Look-Up Table. Maps detector power values to display
 	-- intensity values.
-	Power_Map : entity P3038DM_PWMAP port map (
+	Power_Map : entity PWMAP port map (
 		Address => pwr_rcv,
 		Q => pwr_intensity
 	);

@@ -13,7 +13,7 @@ CoreType=LPM
 CoreStatus=Demo
 CoreName=PLL
 CoreRevision=5.8
-ModuleName=P3038DM_PLL
+ModuleName=PLL
 SourceFormat=VHDL
 ParameterFileVersion=1.0
 Date=05/26/2021
@@ -84,4 +84,4 @@ CLKOS3_AFREQ=
 CLKOS3_PHASEADJ=0
 
 [Command]
-cmd_line= -w -n P3038DM_PLL -lang vhdl -synth synplify -arch xo2c00 -type pll -fin 8 -fclkop 40 -fclkop_tol 0.0 -trimp 0 -phasep 0 -trimp_r -phase_cntl STATIC -fb_mode 1 -lock
+cmd_line= -w -n PLL -lang vhdl -synth synplify -arch xo2c00 -type pll -fin 8 -fclkop 40 -fclkop_tol 0.0 -trimp 0 -phasep 0 -trimp_r -phase_cntl STATIC -fb_mode 1 -lock
