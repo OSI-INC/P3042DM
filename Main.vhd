@@ -18,12 +18,12 @@ entity main is
 		SDO : in std_logic;  -- Serial Data Out from ADC
 		SCK : out std_logic; -- Serial Clock for ADC
 		NCS : out std_logic; -- Negated Chip Select for ADC
-		DSD : inout std_logic; -- Data Strobe, Downstream
-		dbd : inout std_logic_vector(7 downto 0); -- Data Bus, Downstream
-		DSU : inout std_logic; -- Data Strobe, Upstream
-		dbu : inout std_logic_vector(7 downto 0); -- Data Bus, Upstream
+		DSD_in : in std_logic; -- Data Strobe, Downstream
+		dbd : out std_logic_vector(7 downto 0); -- Data Bus, Downstream
+		DSU : out std_logic; -- Data Strobe, Upstream
+		dbu : in std_logic_vector(7 downto 0); -- Data Bus, Upstream
 		DMRST : in std_logic; -- Detector Module Reset (DC0)
-		DRC : in std_logic; -- Detector Readout Control (DC1)
+		DMRC_in : in std_logic; -- Detector Module Read Control (DC1)
 		DMERR : out std_logic; -- Detector Module Error (DC2)
 		MRDY : out std_logic; -- Message Ready (DC3)
 		SHOW : in std_logic; -- Show All Lamps (DC4)
@@ -48,8 +48,7 @@ architecture behavior of main is
 
 -- Detector Control Bus Signals
 	signal ERROR : std_logic; -- Detector module error, to master.
-	signal DSD_sync, DRC_sync : std_logic; -- Synchronized inputs.
-	signal dm_id : std_logic_vector(7 downto 0); -- Identifier for this detector module.
+	signal DSD, DMRC : std_logic; -- Synchronized inputs.
 
 -- Message Decoder Signals
 	signal CONTINUE : std_logic; -- Tell message detector to continue detection.
@@ -89,8 +88,8 @@ begin
 	);
 
 	-- Synchronize control inputs with respect to the rising edge of CK. Generate 
-	-- IOCK at 20 MHz. Apply de-bounce to incoming signals that fall slowly so as
-	-- to guarantee only one falling edge.
+	-- IOCK at 20 MHz for use with the serial readout of the power measurement
+	-- analog to digital converter (ADC).
 	Synchronizer : process (CK) is
 	constant max_state : integer := 15;
 	begin
@@ -101,8 +100,8 @@ begin
 		
 		-- Synchronize inputs asserted by controller.
 		if rising_edge(CK) then
-			DSD_sync <= DSD;
-			DRC_sync <= DRC;
+			DSD <= DSD_in;
+			DMRC <= DMRC_in;
 		end if;
 	end process;
 	
@@ -330,80 +329,115 @@ begin
 		received_record(7 downto 0) <= pwr;
 	end process;
 	
-	-- The Message Reader responds to the readout process on the detector module
-	-- daisy chain.
+	-- The Message Reader asserts MRDY when the message buffer contains a message ready to
+	-- be read, and it responds to all daisy chain message readout cycles, either by providing
+	-- a message from this detector module, or by allowing a message from another detector
+	-- module to pass through. When the daisy chain master reads the detector module daisy
+	-- chain position, the Message Reader takes part in the incrementing of the upstream
+	-- date that generates an automatic determination of the index of the source of all
+	-- messages. 
 	Message_Reader : process (CK,DMRST) is
 	variable state, next_state : integer range 0 to 15;
-	variable ds_forward : boolean;
+	variable local_read : boolean;
 	begin
 	
+		-- On reset, we return to our rest state, we do not read out a message from
+		-- the message buffer, and we drive zeros onto the downstream data lines.
+		-- We set our local_read flag to false, so we will be blocking the incoming
+		-- Data Strobe Downstream (DSD) from passing through to Data Strobe Upstream
+		-- (DSU).
 		if (DMRST = '1') then
 			state := 0;
 			RDMSG <= '0';
-			dm_id <= std_logic_vector(to_unsigned(to_integer(unsigned(dbd))+1,8));
-			ds_forward := false;
+			dbd <= (others => '0');
+			local_read := true;
+			
+		-- Our readout state machine runs off CK and remains in its rest state, blocking
+		-- the data strobe, so long as Detector Module Read Control (DMRC) is unasserted. 
+		-- When DRC is asserted and we have a message waiting, we read it out and block 
+		-- DSD from DSU. We proceed with the five-byte readout of identifier, high data 
+		-- byte, low data byte, power, and daisy chain index in response to data strobes. 
+		-- If DMRC is unasserted any time during the readout, the Message Reader returns
+		-- to its rest state and the message is abandoned. When DMRC is asserted and we
+		-- do not have a message waiting, we do not read a message from the buffer, but
+		-- instead relay DSD to DSU and Data Bus Upstream (dbu) to Data Bus Downstrem
+		-- (dbd). We watch the data strobes, and after the completion of the fourth,
+		-- we increment dbu on its way to dbd. The detector module being read will provide
+		-- a zero, which is incremented by each detector module it passes through, so
+		-- that the byte arriving at the daisy chain master is equal to the source
+		-- module's daisy chain index, the first detector in the chain being index zero.		
 		elsif rising_edge(CK) then
-			dm_id <= dm_id;
+			next_state := state;
 			RDMSG <= '0';
 			
-			next_state := state;
-			if (DRC_sync = '0') then
-				next_state := 0;
-				ds_forward := false;
+			-- We make our MRDY synchronous with our clock to avoid any glitches on
+			-- the global line. We drive it high, but never drive it low, because it
+			-- is shared among all detector modules on the daisy chain.
+			if (FIFO_EMPTY = '0') then
+				MRDY <= '1';
 			else
+				MRDY <= 'Z';
+			end if;
+			
+			-- The rest stae when DMRC is unasserted, we block DSD from DSU.
+			if (DMRC = '0') then
+				next_state := 0;
+				local_read := true;
+			end if;
+			
+			-- The readout state machine. We later use the state to configure
+			-- dbd and DSU.
+			if (DMRC = '1') then
 				case state is 
 					when 0 => 
-						if (FIFO_EMPTY = '0') then
-							next_state := 1;
-							ds_forward := false;
-						else
-							next_state := 15;
-							ds_forward := true;
-						end if;
-					when 1 => if (DSD_sync = '0') then next_state := 2; end if;
-					when 2 => if (DSD_sync = '1') then next_state := 3; end if;
-					when 3 => if (DSD_sync = '0') then next_state := 4; end if;
-					when 4 => if (DSD_sync = '1') then next_state := 5; end if;
-					when 5 => if (DSD_sync = '0') then next_state := 6; end if;
-					when 6 => if (DSD_sync = '1') then next_state := 7; end if;
-					when 7 => if (DSD_sync = '0') then next_state := 8; end if;
-					when 8 => if (DSD_sync = '1') then next_state := 9; end if;
-					when 9 => if (DSD_sync = '0') then next_state := 10; end if;
-					when 10 => 
-						RDMSG <= '1';
-						next_state := 11;
+						next_state := 1;
+						local_read := (FIFO_EMPTY = '0');
+					when 1 => 
+						next_state := 2;
+						if local_read then RDMSG <= '1'; end if;
+					when 2 => if (DSD = '1') then next_state := 3; end if;
+					when 3 => if (DSD = '0') then next_state := 4; end if;
+					when 4 => if (DSD = '1') then next_state := 5; end if;
+					when 5 => if (DSD = '0') then next_state := 6; end if;
+					when 6 => if (DSD = '1') then next_state := 7; end if;
+					when 7 => if (DSD = '0') then next_state := 8; end if;
+					when 8 => if (DSD = '1') then next_state := 9; end if;
+					when 9 => if (DSD = '0') then next_state := 10; end if;
+					when 10 => if (DSD = '1') then next_state := 11; end if;
+					when 11 => if (DSD = '0') then next_state := 12; end if;
 					when others => next_state := state;
 				end case;
 			end if;
-		
+			
 			state := next_state;
 		end if;
 		
-		if (DMRST = '1') then
-			dbd <= (others => 'Z');
-			dbu <= dm_id;
-		else 
-			dbu <= (others => 'Z');
+		-- We control DSU and dbd with combinatorial logic so that we can minimize
+		-- the propagation delay up and down the daisy chain. The detector module
+		-- introduces one pin-to-pin delay, which for our ZE chips is around 7 ns,
+		-- rather than the 25-ns period of our clock.
+		if local_read then
+			DSU <= '0';
 			case state is
-				when 0 then dbd <= (others => 'Z');
-				when 1 then dbd <= recalled_record(31 downto 24);
-				when 2 then dbd <= recalled_record(23 downto 24);
-				when 3 then dbd <= recalled_record(23 downto 16);
-				when 4 then dbd <= recalled_record(15 downto 8);
-				when 5 then dbd <= recalled_record(15 downto 8);
-				when 6 then dbd <= recalled_record(7 downto 0);
-				when 7 then dbd <= recalled_record(7 downto 0);
-				when 8 then dbd <= dm_id;
-				when 9 then dbd <= dm_id;
-				when others dbd <= dbu;				
+				when 0 | 1 => dbd <= (others => '0');
+				when 2 | 3 => dbd <= recalled_record(31 downto 24);
+				when 4 | 5 => dbd <= recalled_record(23 downto 16);
+				when 6 | 7 => dbd <= recalled_record(15 downto 8);
+				when 8 | 9 => dbd <= recalled_record(7 downto 0);
+				when others => dbd <= (others =>'0');				
+			end case;
+		else 
+			DSU <= DSD;
+			case state is
+				when 0 | 1 => dbd <= (others => '0');
+				when 2 | 3 => dbd <= dbu;
+				when 4 | 5 => dbd <= dbu;
+				when 6 | 7 => dbd <= dbu;
+				when 8 | 9 => dbd <= dbu;
+				when others => dbd <= std_logic_vector(to_unsigned(to_integer(unsigned(dbu))+1,8));		
 			end case;
 		end if;
 		
-		if ds_forward then
-			DSU <= DSD;
-		else 
-			DSU <= '0';
-		end if;
 	end process;
 	
 	-- The error detector looks for overflow or empty FIFO conflicts.
@@ -547,6 +581,6 @@ begin
 	
 	TP(1) <= INCOMING;
 	TP(2) <= RECEIVED;
-	TP(3) <= DSU;
-	TP(4) <= DSD;
+	TP(3) <= DSD;
+	TP(4) <= FIFO_EMPTY;
 end behavior;
