@@ -5,7 +5,18 @@
 -- [18-NOV-22] Copy A3038DM v8.1, make file names generic. Tag as A3042DM v1.1, could be used in
 -- the A3038DM.
 
--- [18-NOV-22] 
+-- [20-NOV-22] Change the way the detector modules record messages and communicate with the base 
+-- board controller. Each detector module now receives messages independently, measuring the power
+-- of its own messages, but never pausing to measure power for messages received by other detector
+-- modules. The detector stores each complete and self-consistent message in a first-in, first-out
+-- buffer. When the buffer contains one or more messages, the detector asserts the global MRDY
+-- flag, otherwise leaves the flag alon, apart from pulling it down with a resistor. Upon readout,
+-- the first detector module upstream of the base board controller that has a message ready will
+-- respond with its message, which will pass through the detectors between it and the controller.
+-- Each detector module's position in the daisy chain is revealed at the end of each readout by
+-- a zero byte it provides and that is subsequently incremented by each intermediate detector. The
+-- first detector is index zero, the sixteenth is index fifteen. We move SHOW to DC4 and leave
+-- DC5 and DC6 for SDI and SDO respectively, which the detector modules do not yet make use of.
 
 -- Global Constantslibrary ieee;  
 library ieee;  
@@ -367,8 +378,6 @@ begin
 		-- that the byte arriving at the daisy chain master is equal to the source
 		-- module's daisy chain index, the first detector in the chain being index zero.		
 		elsif rising_edge(CK) then
-			next_state := state;
-			RDMSG <= '0';
 			
 			-- We make our MRDY synchronous with our clock to avoid any glitches on
 			-- the global line. We drive it high, but never drive it low, because it
@@ -379,7 +388,11 @@ begin
 				MRDY <= 'Z';
 			end if;
 			
-			-- The rest stae when DMRC is unasserted, we block DSD from DSU.
+			-- Default values for state and outputs.
+			next_state := state;
+			RDMSG <= '0';
+			
+			-- The rest state when DMRC is unasserted, we block DSD from DSU.
 			if (DMRC = '0') then
 				next_state := 0;
 				local_read := true;
@@ -394,8 +407,10 @@ begin
 						local_read := (FIFO_EMPTY = '0');
 					when 1 => 
 						next_state := 2;
+					when 2 => if (DSD = '1') then 
+						next_state := 3; 
 						if local_read then RDMSG <= '1'; end if;
-					when 2 => if (DSD = '1') then next_state := 3; end if;
+					end if;
 					when 3 => if (DSD = '0') then next_state := 4; end if;
 					when 4 => if (DSD = '1') then next_state := 5; end if;
 					when 5 => if (DSD = '0') then next_state := 6; end if;
