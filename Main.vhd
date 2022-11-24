@@ -18,6 +18,11 @@
 -- first detector is index zero, the sixteenth is index fifteen. We move SHOW to DC4 and leave
 -- DC5 and DC6 for SDI and SDO respectively, which the detector modules do not yet make use of.
 
+-- [22-NOV-22] We are investigating the source of a glitch in MRDY that occurs always 1.6 us after
+-- the assertion of MRDY. We route DSD_in to DSU instead of the synchronized version of DSD, thus
+-- reducing the propagation delay of the strobe through the daisy chain. Expand message FIFO to
+-- depth 32 from 16.
+
 -- Global Constantslibrary ieee;  
 library ieee;  
 use ieee.std_logic_1164.all;
@@ -175,38 +180,12 @@ begin
 			else
 				DMERR <= 'Z';
 			end if;
-			
-			if RECEIVED = '1' then
-				MRDY <= '1';
-			else
-				MRDY <= 'Z';
-			end if;
 		end if;
 	end process;
 	
-	-- The Message FIFO receives new 32-bit message records and allows the
-	-- them to be read out later by the detector module daisy chain. The FIFO
-	-- writes occur on the falling edge of CK. We asser WrEn on the prior
-	-- rising edge, which allows 12.5 ns (half of 40-MHz period) for the FIFO
-	-- to prepare for WrClock. The logic chip requires 11.4 ns setup. On the
-	-- read, we set up RdEn on the falling edge and read on the rising edge
-	-- of CK, which again allows 12.5 ns setup where 11.7 ns is required.
-	Message_FIFO : entity FIFO port map (
-		Data => received_record,
-        WrClock => CK,
-        RdClock => CK,
-        WrEn => WRMSG,
-        RdEn => RDMSG,
-        Reset => DMRST,
-        RPReset => DMRST,
-        Q => recalled_record,
-        Empty => FIFO_EMPTY,
-        Full => FIFO_FULL
-	);	
-	
 	-- We sample the power detector output and read out the ADC when we
 	-- see INCOMING asserted. We drive the ADC chip select input low 
-	-- (asserting !CS). We then wait until MRDY is asserted, at which time 
+	-- (asserting !CS). We then wait until RECEIVED is asserted, at which time 
 	-- it is safe to read out the ADC without disturbing message reception. 
 	-- We generate SCK at 20 MHz and read out three dummy bits, eight data 
 	-- bits, and three terminating bits. The ADC transitions to input tracking 
@@ -223,7 +202,7 @@ begin
 			state := 0;
 			SCK <= '1';
 			NCS <= '1';
-			pwr <= "00000000";
+			pwr <= (others => '0');
 			PRDY <= false;
 		elsif rising_edge(IOCK) then
 			next_state := state;
@@ -297,42 +276,61 @@ begin
 			state := next_state;
 		end if;
 	end process;
-	
+	-- The Message FIFO receives new 32-bit message records and allows the
+	-- them to be read out later by the detector module daisy chain. The FIFO
+	-- reads and writes on rising edges of CK, allowing 25 ns between a
+	-- write to the FIFO and a read. The logic needs about 12 ns setup time.
+	Message_FIFO : entity FIFO port map (
+		Data => received_record,
+        WrClock => CK,
+        RdClock => CK,
+        WrEn => WRMSG,
+        RdEn => RDMSG,
+        Reset => DMRST,
+        RPReset => DMRST,
+        Q => recalled_record,
+        Empty => FIFO_EMPTY,
+        Full => FIFO_FULL
+	);	
+
 	-- The Message Recorder saves 32-bit message records in the FIFO. The
 	-- top eight bits are the message id, the next sixteen are the message
 	-- data, and the final eight are the power.
 	Message_Recorder : process (CK,DMRST) is
-	variable state, next_state : integer range 0 to 3;
+	variable state, next_state : integer range 0 to 7;
 	begin
 		if DMRST = '1' then
 			state := 0;
 			RSTDCR <= '1';
-			pwr_rcv <= "00000000";
+			pwr_rcv <= (others => '0');
 		elsif rising_edge(CK) then
-			next_state := state;
 			RSTDCR <= '0';
-			WRMSG <= '0';
 			case state is
 				when 0 =>
 					if (RECEIVED = '1') and PRDY then 
 						next_state := 1;
+					else
+						next_state := 0;
 					end if;
 				when 1 =>
 					next_state := 2;
-					WRMSG <= '1';
 					pwr_rcv <= pwr;
 				when 2 =>
-					RSTDCR <= '1';
-					if RECEIVED = '0' then
-						next_state := 3;
-					else
-						next_state := 2;
-					end if;
+					next_state := 3;
 				when 3 =>
 					RSTDCR <= '1';
-					next_state := 0;
+					if RECEIVED = '0' then
+						next_state := 4;
+					else
+						next_state := 3;
+					end if;
+				when others => next_state := 0;
 			end case;
 			state := next_state;
+		end if;
+		
+		if rising_edge(CK) then
+			WRMSG <= to_std_logic(state = 1);
 		end if;
 		
 		received_record(31 downto 24) <= std_logic_vector(to_unsigned(message_id,8));
@@ -362,6 +360,7 @@ begin
 			RDMSG <= '0';
 			dbd <= (others => '0');
 			local_read := true;
+			MRDY <= 'Z';
 			
 		-- Our readout state machine runs off CK and remains in its rest state, blocking
 		-- the data strobe, so long as Detector Module Read Control (DMRC) is unasserted. 
@@ -442,7 +441,7 @@ begin
 				when others => dbd <= (others =>'0');				
 			end case;
 		else 
-			DSU <= DSD;
+			DSU <= DSD_in;
 			case state is
 				when 0 | 1 => dbd <= (others => '0');
 				when 2 | 3 => dbd <= dbu;
@@ -452,7 +451,6 @@ begin
 				when others => dbd <= std_logic_vector(to_unsigned(to_integer(unsigned(dbu))+1,8));		
 			end case;
 		end if;
-		
 	end process;
 	
 	-- The error detector looks for overflow or empty FIFO conflicts.
@@ -594,6 +592,9 @@ begin
 		end if;
 	end process;
 	
+	-- Signals TP1..TP4 appear on the programming connector footprint beside
+	-- each detector module on the base board. The test points TP1..TP4 are
+	-- pads 2, 3, 6 and 8 respectively.
 	TP(1) <= INCOMING;
 	TP(2) <= RECEIVED;
 	TP(3) <= DSD;

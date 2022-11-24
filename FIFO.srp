@@ -1,5 +1,5 @@
 SCUBA, Version Diamond (64-bit) 3.12.1.454
-Sat Nov 19 22:07:59 2022
+Tue Nov 22 21:46:40 2022
 
 Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
 Copyright (c) 1995 AT&T Corp.   All rights reserved.
@@ -7,7 +7,7 @@ Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
 Copyright (c) 2001 Agere Systems   All rights reserved.
 Copyright (c) 2002-2020 Lattice Semiconductor Corporation,  All rights reserved.
 
-    Issued command   : C:\lscc\diamond\3.12\ispfpga\bin\nt64\scuba.exe -w -n FIFO -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type ebfifo -depth 16 -width 32 -rwidth 32 -pfu_fifo -no_enable -pe -1 -pf -1 
+    Issued command   : C:\lscc\diamond\3.12\ispfpga\bin\nt64\scuba.exe -w -n FIFO -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -type ebfifo -depth 32 -width 32 -rwidth 32 -pfu_fifo -no_enable -pe -1 -pf -1 
     Circuit name     : FIFO
     Module type      : ebfifo
     Module Version   : 5.8
@@ -28,15 +28,16 @@ Copyright (c) 2002-2020 Lattice Semiconductor Corporation,  All rights reserved.
             CU2 : 6
          FADD2B : 6
         FD1P3BX : 2
-        FD1P3DX : 60
+        FD1P3DX : 66
         FD1S3BX : 1
-        FD1S3DX : 21
-            INV : 2
+        FD1S3DX : 25
+            INV : 3
+          MUX21 : 32
             OR2 : 1
-       ROM16X1A : 13
-       DPR16X4C : 8
-           XOR2 : 8
+       ROM16X1A : 16
+       DPR16X4C : 16
+           XOR2 : 10
     Estimated Resource Usage:
-            LUT : 60
-           DRAM : 8
-            Reg : 84
+            LUT : 97
+           DRAM : 16
+            Reg : 94

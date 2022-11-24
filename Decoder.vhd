@@ -8,10 +8,11 @@
 -- Version 1: [01-APR-21] Translated from ABEL program P302702A12_Decoder.abl.
 
 -- Version 2: [10-MAY-21] Remove the CNT (continue) input. We will use the RST (reset)
--- input to restore the decoder to its initial state. In order to simplify the detector-- readout process, we reset all decoders after they store a message record in their 
--- message buffers. The decoder stays in its message-store state until reset. We correct
--- bugs in the reset implementation and forbid the reception of messages with ID exactly
--- divisible by sixteen.
+-- input to restore the decoder to its initial state. The decoder stays in its message-store 
+-- state until reset. We correct bugs in the reset implementation and forbid the reception 
+-- of messages with ID exactly divisible by sixteen.
+
+-- Version 3: [22-NOV-22] Make INCOMING synchronous with CK, with asynchronous reset.
 
 library ieee;  
 use ieee.std_logic_1164.all;
@@ -94,9 +95,10 @@ begin
 	begin
 		if (RST = '1') then
 			rvs := rvs_rest;
-			rvd := "000000000000000000000000";
+			rvd := (others => '0');
 			ec := 0;
 			RECEIVED <= '0';
+			INCOMING <= '0';
 		elsif rising_edge(CK) then
 			next_rvs := rvs_rest;
 			RECEIVED <= '0';
@@ -107,7 +109,7 @@ begin
 					else
 						next_rvs := rvs_rest;
 					end if;
-					rvd := "000000000000000000000000";
+					rvd := (others => '0');
 				when rvs_s1 => -- Check for !Q too soon.
 					if not SQ then 
 						next_rvs := rvs_clr_ec; 
@@ -278,18 +280,18 @@ begin
 			end case;
 			
 			rvs := next_rvs;
+
+			if (ec >= min_inc_bits) then
+				INCOMING <= '1';
+			else
+				INCOMING <= '0';
+			end if;
 		end if;
 		
-		DONE := (ec = num_message_bits);
 		channel_id := to_integer(unsigned(rvd(23 downto 20)));
 		completion_code := to_integer(unsigned(rvd(3 downto 0)));
 		VALID := (channel_id /= 0);
-		if (ec >= min_inc_bits) then
-			INCOMING <= '1';
-		else
-			INCOMING <= '0';
-		end if;
-	
+		DONE := (ec = num_message_bits);
 		message_data <= rvd(19 downto 4);
 		message_id <= (16 * (completion_code - 15 + channel_id)) + channel_id;
 	end process;
