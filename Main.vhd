@@ -21,7 +21,7 @@
 -- [22-NOV-22] We are investigating the source of a glitch in MRDY that occurs always 1.6 us after
 -- the assertion of MRDY. We route DSD_in to DSU instead of the synchronized version of DSD, thus
 -- reducing the propagation delay of the strobe through the daisy chain. Expand message FIFO to
--- depth 32 from 16.
+-- depth 32 from 16. Find source of problem: two sources of MRDY, eliminate the obsolete code.
 
 -- Global Constantslibrary ieee;  
 library ieee;  
@@ -347,7 +347,9 @@ begin
 	-- messages. 
 	Message_Reader : process (CK,DMRST) is
 	variable state, next_state : integer range 0 to 15;
+	variable data_out : std_logic_vector(7 downto 0);
 	variable local_read : boolean;
+	variable increment : boolean;
 	begin
 	
 		-- On reset, we return to our rest state, we do not read out a message from
@@ -359,7 +361,9 @@ begin
 			state := 0;
 			RDMSG <= '0';
 			dbd <= (others => '0');
+			data_out := (others => '0');
 			local_read := true;
+			increment := false;
 			MRDY <= 'Z';
 			
 		-- Our readout state machine runs off CK and remains in its rest state, blocking
@@ -390,6 +394,8 @@ begin
 			-- Default values for state and outputs.
 			next_state := state;
 			RDMSG <= '0';
+			increment := false;
+			data_out := (others => '0');
 			
 			-- The rest state when DMRC is unasserted, we block DSD from DSU.
 			if (DMRC = '0') then
@@ -406,20 +412,43 @@ begin
 						local_read := (FIFO_EMPTY = '0');
 					when 1 => 
 						next_state := 2;
-					when 2 => if (DSD = '1') then 
-						next_state := 3; 
-						if local_read then RDMSG <= '1'; end if;
-					end if;
-					when 3 => if (DSD = '0') then next_state := 4; end if;
-					when 4 => if (DSD = '1') then next_state := 5; end if;
-					when 5 => if (DSD = '0') then next_state := 6; end if;
-					when 6 => if (DSD = '1') then next_state := 7; end if;
-					when 7 => if (DSD = '0') then next_state := 8; end if;
-					when 8 => if (DSD = '1') then next_state := 9; end if;
-					when 9 => if (DSD = '0') then next_state := 10; end if;
-					when 10 => if (DSD = '1') then next_state := 11; end if;
-					when 11 => if (DSD = '0') then next_state := 12; end if;
-					when others => next_state := state;
+					when 2 => 
+						if (DSD = '1') then 
+							next_state := 3; 
+							if local_read then 
+								RDMSG <= '1'; 
+							end if;
+						end if;
+						data_out := recalled_record(31 downto 24);
+					when 3 => 
+						if (DSD = '0') then next_state := 4; end if;
+						data_out := recalled_record(31 downto 24);
+					when 4 => 
+						if (DSD = '1') then next_state := 5; end if;
+						data_out := recalled_record(23 downto 16);
+					when 5 => 
+						if (DSD = '0') then next_state := 6; end if;
+						data_out := recalled_record(23 downto 16);						
+					when 6 => 
+						if (DSD = '1') then next_state := 7; end if;
+						data_out := recalled_record(15 downto 8);
+					when 7 => 
+						if (DSD = '0') then next_state := 8; end if;
+						data_out := recalled_record(15 downto 8);
+					when 8 => 
+						if (DSD = '1') then next_state := 9; end if;
+						data_out := recalled_record(7 downto 0);
+					when 9 => 
+						if (DSD = '0') then next_state := 10; end if;
+						data_out := recalled_record(7 downto 0);
+					when 10 => 
+						if (DSD = '1') then next_state := 11; end if;
+						increment := true;
+					when 11 => 
+						if (DSD = '0') then next_state := 12; end if;
+						increment := true;
+					when others => 
+						next_state := 12;
 				end case;
 			end if;
 			
@@ -428,28 +457,21 @@ begin
 		
 		-- We control DSU and dbd with combinatorial logic so that we can minimize
 		-- the propagation delay up and down the daisy chain. The detector module
-		-- introduces one pin-to-pin delay, which for our ZE chips is around 7 ns,
+		-- introduces one pin-to-pin delay, which for our ZE chips is around 10 ns,
 		-- rather than the 25-ns period of our clock.
 		if local_read then
 			DSU <= '0';
-			case state is
-				when 0 | 1 => dbd <= (others => '0');
-				when 2 | 3 => dbd <= recalled_record(31 downto 24);
-				when 4 | 5 => dbd <= recalled_record(23 downto 16);
-				when 6 | 7 => dbd <= recalled_record(15 downto 8);
-				when 8 | 9 => dbd <= recalled_record(7 downto 0);
-				when others => dbd <= (others =>'0');				
-			end case;
+			dbd <= data_out;
 		else 
 			DSU <= DSD_in;
-			case state is
-				when 0 | 1 => dbd <= (others => '0');
-				when 2 | 3 => dbd <= dbu;
-				when 4 | 5 => dbd <= dbu;
-				when 6 | 7 => dbd <= dbu;
-				when 8 | 9 => dbd <= dbu;
-				when others => dbd <= std_logic_vector(to_unsigned(to_integer(unsigned(dbu))+1,8));		
-			end case;
+			if increment then 
+				dbd <= std_logic_vector(
+					to_unsigned(
+						to_integer(
+							unsigned(dbu))+1,8));
+			else
+				dbd <= dbu;
+			end if;
 		end if;
 	end process;
 	
@@ -597,6 +619,6 @@ begin
 	-- pads 2, 3, 6 and 8 respectively.
 	TP(1) <= INCOMING;
 	TP(2) <= RECEIVED;
-	TP(3) <= DSD;
-	TP(4) <= FIFO_EMPTY;
+	TP(3) <= RDMSG;
+	TP(4) <= dbd(0) xor dbd(1) xor dbd(2) xor dbd(3) xor dbd(4) xor dbd(5) xor dbd(6) xor dbd(7);
 end behavior;
