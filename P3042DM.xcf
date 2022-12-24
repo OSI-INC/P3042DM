@@ -9,29 +9,28 @@
 			<Pos>1</Pos>
 			<Vendor>Lattice</Vendor>
 			<Family>MachXO2</Family>
-			<Name>LCMXO2-1200ZE</Name>
-			<IDCode>0x012b2043</IDCode>
+			<Name>LCMXO2-2000ZE</Name>
+			<IDCode>0x012b3043</IDCode>
 			<Package>All</Package>
-			<PON>LCMXO2-1200ZE</PON>
+			<PON>LCMXO2-2000ZE</PON>
 			<Bypass>
 				<InstrLen>8</InstrLen>
 				<InstrVal>11111111</InstrVal>
 				<BScanLen>1</BScanLen>
 				<BScanVal>0</BScanVal>
 			</Bypass>
-			<File>C:/Kevan/A3042/P3042DM/impl1/P3042DM_impl1.jed</File>
-			<FileTime>11/21/22 09:31:33</FileTime>
-			<JedecChecksum>0xD3C4</JedecChecksum>
+			<File>C:/Kevan/A3042/P3042DM3V1_2000ZE.jed</File>
+			<FileTime>12/23/22 15:00:44</FileTime>
+			<JedecChecksum>0x9400</JedecChecksum>
 			<Operation>FLASH Erase,Program,Verify</Operation>
 			<Option>
 				<SVFVendor>JTAG STANDARD</SVFVendor>
 				<IOState>HighZ</IOState>
-				<PreloadLength>208</PreloadLength>
-				<IOVectorData>0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF</IOVectorData>
-				<OverideUES value="TRUE"/>
+				<PreloadLength>424</PreloadLength>
+				<IOVectorData>0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF</IOVectorData>
 				<TCKFrequency>1.000000 MHz</TCKFrequency>
-				<SVFProcessor>ispVM</SVFProcessor>
 				<Usercode>0x00000000</Usercode>
+				<AccessMode>FLASH</AccessMode>
 			</Option>
 		</Device>
 	</Chain>

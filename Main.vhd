@@ -23,6 +23,11 @@
 -- reducing the propagation delay of the strobe through the daisy chain. Expand message FIFO to
 -- depth 32 from 16. Find source of problem: two sources of MRDY, eliminate the obsolete code.
 
+-- [22-DEC-22] Delay writing to message buffer until the buffer is not full, so as to avoid
+-- indeterminate buffer overflow behavior when the TCB is overwhelmed with message from many 
+-- antennas. Eliminate buffer empty empty when read error, because this cannto occur. Make buffer
+-- full error occur and persist whenever the buffer is full even briefly.
+
 -- Global Constantslibrary ieee;  
 library ieee;  
 use ieee.std_logic_1164.all;
@@ -295,7 +300,10 @@ begin
 
 	-- The Message Recorder saves 32-bit message records in the FIFO. The
 	-- top eight bits are the message id, the next sixteen are the message
-	-- data, and the final eight are the power.
+	-- data, and the final eight are the power. The recorder waits until 
+	-- the power measurement is ready and the FIFO is not full before
+	-- writing to the buffer. While waiting to write, the message decoder
+	-- holds the data and refrains from further reception.
 	Message_Recorder : process (CK,DMRST) is
 	variable state, next_state : integer range 0 to 7;
 	begin
@@ -307,7 +315,7 @@ begin
 			RSTDCR <= '0';
 			case state is
 				when 0 =>
-					if (RECEIVED = '1') and PRDY then 
+					if (RECEIVED = '1') and PRDY and (FIFO_FULL = '0') then 
 						next_state := 1;
 					else
 						next_state := 0;
@@ -482,15 +490,12 @@ begin
 			FIFO_FULL_ERR <= false;
 			FIFO_EMPTY_ERR <= false;
 		elsif rising_edge(CK) then
-			if (WRMSG = '1') and (FIFO_FULL = '1') then
+			if (FIFO_FULL = '1') then
 				FIFO_FULL_ERR <= true;
-			end if;
-			if (RDMSG = '1') and (FIFO_EMPTY = '1') then
-				FIFO_EMPTY_ERR <= true;
 			end if;
 		end if;
 		
-		ERROR <= to_std_logic(FIFO_EMPTY_ERR or FIFO_FULL_ERR or (LOCK = '0'));
+		ERROR <= to_std_logic(FIFO_FULL_ERR or (LOCK = '0'));
 	end process;
 	
 	-- The run indicator glows steady if power is on, logic is programmed,
@@ -526,8 +531,7 @@ begin
 		end if;
 		
 		err_led_on := 
-			(FIFO_FULL_ERR and (counter >= 0) and (counter <= 1))
-			or (FIFO_EMPTY_ERR and (counter >= 4) and (counter <= 11))
+			(FIFO_FULL_ERR and (counter >= 0) and (counter <= 6))
 			or (LOCK = '0');
 		
 		if SHOW = '1' then
@@ -605,6 +609,8 @@ begin
 		if rising_edge(SLWCK) then
 			if SHOW = '1' then
 				LED(pwr_led_num) <= '1';
+			elsif (LOCK = '0') then
+				LED(pwr_led_num) <= '0';
 			elsif counter < to_integer(unsigned(pwr_intensity)) then
 				LED(pwr_led_num) <= '1';	
 			else
