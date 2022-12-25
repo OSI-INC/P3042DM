@@ -28,6 +28,11 @@
 -- antennas. Eliminate buffer empty empty when read error, because this cannto occur. Make buffer
 -- full error occur and persist whenever the buffer is full even briefly.
 
+-- [24-DEC-22] Determine antenna number by means of a configuration access. Reassign DC4 as
+-- Detector Module Configure (DMCFG), was formerly SHOW. The controller asserts DMCFG before 
+-- Detector Module Read Control (DMRC) to initiate a configuration procedure. We eliminate the
+-- SHOW functionality. 
+
 -- Global Constantslibrary ieee;  
 library ieee;  
 use ieee.std_logic_1164.all;
@@ -47,7 +52,7 @@ entity main is
 		DMRC_in : in std_logic; -- Detector Module Read Control (DC1)
 		DMERR : out std_logic; -- Detector Module Error (DC2)
 		MRDY : out std_logic; -- Message Ready (DC3)
-		SHOW : in std_logic; -- Show All Lamps (DC4)
+		DMCFG : in std_logic; -- Detector Module Configure (DC4)
 		DMCK : in std_logic; -- Detector Module Clock (DC7)
 		LED : out std_logic_vector(5 downto 1); -- Indictors Lamps
 		TP : out std_logic_vector(4 downto 1) -- Test Points
@@ -349,13 +354,12 @@ begin
 	-- The Message Reader asserts MRDY when the message buffer contains a message ready to
 	-- be read, and it responds to all daisy chain message readout cycles, either by providing
 	-- a message from this detector module, or by allowing a message from another detector
-	-- module to pass through. When the daisy chain master reads the detector module daisy
-	-- chain position, the Message Reader takes part in the incrementing of the upstream
-	-- date that generates an automatic determination of the index of the source of all
-	-- messages. 
+	-- module to pass through. A special daisy chain access with DMCFG set results in a 
+	-- calculation of each detector module's identifying number through incrementing down
+	-- the chain.
 	Message_Reader : process (CK,DMRST) is
 	variable state, next_state : integer range 0 to 15;
-	variable data_out : std_logic_vector(7 downto 0);
+	variable data_out, dm_num : std_logic_vector(7 downto 0);
 	variable local_read : boolean;
 	variable increment : boolean;
 	begin
@@ -383,11 +387,9 @@ begin
 		-- to its rest state and the message is abandoned. When DMRC is asserted and we
 		-- do not have a message waiting, we do not read a message from the buffer, but
 		-- instead relay DSD to DSU and Data Bus Upstream (dbu) to Data Bus Downstrem
-		-- (dbd). We watch the data strobes, and after the completion of the fourth,
-		-- we increment dbu on its way to dbd. The detector module being read will provide
-		-- a zero, which is incremented by each detector module it passes through, so
-		-- that the byte arriving at the daisy chain master is equal to the source
-		-- module's daisy chain index, the first detector in the chain being index zero.		
+		-- (dbd). With Detector Module Configure (DMCFG) set, the Message Reader executes
+		-- a configuration cycle where is calculates its own detector number in 
+		-- cooperation with all the other detectors on the daisy chain.
 		elsif rising_edge(CK) then
 			
 			-- We make our MRDY synchronous with our clock to avoid any glitches on
@@ -411,21 +413,26 @@ begin
 				local_read := true;
 			end if;
 			
-			-- The readout state machine. We later use the state to configure
-			-- dbd and DSU.
+			-- The readout and configuration access state progression. If DMCFG is
+			-- asserted, we set the local read flag and go immediately to the end 
+			-- state. Otherwise we step through the states of a message read, either
+			-- from this detector or an upstream detector.
 			if (DMRC = '1') then
 				case state is 
 					when 0 => 
-						next_state := 1;
-						local_read := (FIFO_EMPTY = '0');
+						if (DMCFG = '1') then
+							next_state := 12;
+							local_read := true;
+						else 
+							next_state := 1;
+							local_read := (FIFO_EMPTY = '0');
+						end if;
 					when 1 => 
 						next_state := 2;
 					when 2 => 
 						if (DSD = '1') then 
 							next_state := 3; 
-							if local_read then 
-								RDMSG <= '1'; 
-							end if;
+							if local_read then RDMSG <= '1'; end if;
 						end if;
 						data_out := recalled_record(31 downto 24);
 					when 3 => 
@@ -451,16 +458,37 @@ begin
 						data_out := recalled_record(7 downto 0);
 					when 10 => 
 						if (DSD = '1') then next_state := 11; end if;
-						increment := true;
+						data_out := dm_num;
 					when 11 => 
 						if (DSD = '0') then next_state := 12; end if;
-						increment := true;
+						data_out := dm_num;
 					when others => 
 						next_state := 12;
+						data_out := dm_num;
 				end case;
 			end if;
 			
 			state := next_state;
+		end if;
+		
+		-- During configuration, we add one to the upstream data to obtain our detector
+		-- number, and forward our number downstream for use by the next detector. The 
+		-- last detector on the daisy chain receives zero from upstream, so gives itself
+		-- number one, and drives one downstream so the downstream detector will configure
+		-- itself with number two, and so on. When we have sixteen detector modules on
+		-- the daisy chain, the first calls itself number sixteen, and we must allow at
+		-- least sixteen CK cycles for the first detector module to count up to sixteen.
+		if (DMRST = '1') then
+			dm_num := (others => '0');
+		elsif falling_edge(CK) then
+			if (state = 12) and (DMCFG = '1') then
+				dm_num := std_logic_vector(
+					to_unsigned(
+						to_integer(
+							unsigned(dbu))+1,8));
+			else
+				dm_num := dm_num;
+			end if;
 		end if;
 		
 		-- We control DSU and dbd with combinatorial logic so that we can minimize
@@ -472,14 +500,7 @@ begin
 			dbd <= data_out;
 		else 
 			DSU <= DSD_in;
-			if increment then 
-				dbd <= std_logic_vector(
-					to_unsigned(
-						to_integer(
-							unsigned(dbu))+1,8));
-			else
-				dbd <= dbu;
-			end if;
+			dbd <= dbu;
 		end if;
 	end process;
 	
@@ -513,10 +534,6 @@ begin
 		
 		run_led_on := (counter rem 4) = 3;
 			
-		if SHOW = '1' then
-			run_led_on := true;
-		end if;
-		
 		LED(run_led_num) <= to_std_logic(run_led_on);
 	end process;
 	
@@ -533,11 +550,7 @@ begin
 		err_led_on := 
 			(FIFO_FULL_ERR and (counter >= 0) and (counter <= 6))
 			or (LOCK = '0');
-		
-		if SHOW = '1' then
-			err_led_on := true;
-		end if;
-		
+			
 		LED(err_led_num) <= to_std_logic(err_led_on);
 	end process;
 	
@@ -547,9 +560,7 @@ begin
 	constant pulse_length : integer := 32768;
 	begin
 		if rising_edge(CK) then
-			if SHOW = '1' then
-				LED(inc_led_num) <= '1';
-			elsif (counter = 0) then
+			if (counter = 0) then
 				if (INCOMING = '1') then
 					counter := 1;
 				else
@@ -573,9 +584,7 @@ begin
 	constant pulse_length : integer := 32768;
 	begin
 		if rising_edge(CK) then
-			if SHOW = '1' then
-				LED(rcv_led_num) <= '1';
-			elsif (counter = 0) then
+			if (counter = 0) then
 				if (RECEIVED = '1') then
 					counter := 1;
 				else
@@ -607,9 +616,7 @@ begin
 	variable counter : integer range 0 to 255;
 	begin
 		if rising_edge(SLWCK) then
-			if SHOW = '1' then
-				LED(pwr_led_num) <= '1';
-			elsif (LOCK = '0') then
+			if (LOCK = '0') then
 				LED(pwr_led_num) <= '0';
 			elsif counter < to_integer(unsigned(pwr_intensity)) then
 				LED(pwr_led_num) <= '1';	
