@@ -33,6 +33,8 @@
 -- Detector Module Read Control (DMRC) to initiate a configuration procedure. We eliminate the
 -- SHOW functionality. 
 
+-- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
+
 -- Global Constantslibrary ieee;  
 library ieee;  
 use ieee.std_logic_1164.all;
