@@ -35,7 +35,7 @@
 
 -- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
 
--- Global Constantslibrary ieee;  
+-- Global Constants 
 library ieee;  
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
