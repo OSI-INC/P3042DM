@@ -19,9 +19,9 @@
 				<BScanLen>1</BScanLen>
 				<BScanVal>0</BScanVal>
 			</Bypass>
-			<File>C:/Kevan/A3042/P3042DMQR2_1200ZE.jed</File>
-			<FileTime>12/25/22 11:20:25</FileTime>
-			<JedecChecksum>0xBA64</JedecChecksum>
+			<File>C:/Kevan/A3042/P3042DM3V1_1200ZE.jed</File>
+			<FileTime>01/04/23 19:30:49</FileTime>
+			<JedecChecksum>0xCDA9</JedecChecksum>
 			<Operation>FLASH Erase,Program,Verify</Operation>
 			<Option>
 				<SVFVendor>JTAG STANDARD</SVFVendor>
@@ -29,6 +29,7 @@
 				<PreloadLength>208</PreloadLength>
 				<IOVectorData>0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF</IOVectorData>
 				<TCKFrequency>1.000000 MHz</TCKFrequency>
+				<SVFProcessor>SVF Processor</SVFProcessor>
 				<Usercode>0x00000000</Usercode>
 				<AccessMode>FLASH</AccessMode>
 			</Option>
@@ -44,9 +45,9 @@
 		<TCKDelay>1</TCKDelay>
 	</ProjectOptions>
 	<CableOptions>
-		<CableName>USB</CableName>
-		<PortAdd>EzUSB-0</PortAdd>
-		<USBID>\\?\usb#vid_1134&amp;amp;pid_8001#5&amp;amp;2527471&amp;amp;0&amp;amp;1#</USBID>
+		<CableName>USB2</CableName>
+		<PortAdd>FTUSB-0</PortAdd>
+		<USBID>Lattice HW-USBN-2B Ch A Location 0000 Serial VER00001A</USBID>
 		<JTAGPinSetting>
 			ISPEN	HIGH;
 		</JTAGPinSetting>

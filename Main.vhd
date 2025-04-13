@@ -288,6 +288,7 @@ begin
 			state := next_state;
 		end if;
 	end process;
+	
 	-- The Message FIFO receives new 32-bit message records and allows the
 	-- them to be read out later by the detector module daisy chain. The FIFO
 	-- reads and writes on rising edges of CK, allowing 25 ns between a
@@ -383,14 +384,17 @@ begin
 		-- Our readout state machine runs off CK and remains in its rest state, blocking
 		-- the data strobe, so long as Detector Module Read Control (DMRC) is unasserted. 
 		-- When DRC is asserted and we have a message waiting, we read it out and block 
-		-- DSD from DSU. We proceed with the five-byte readout of identifier, high data 
-		-- byte, low data byte, power, and daisy chain index in response to data strobes. 
-		-- If DMRC is unasserted any time during the readout, the Message Reader returns
-		-- to its rest state and the message is abandoned. When DMRC is asserted and we
-		-- do not have a message waiting, we do not read a message from the buffer, but
-		-- instead relay DSD to DSU and Data Bus Upstream (dbu) to Data Bus Downstrem
-		-- (dbd). With Detector Module Configure (DMCFG) set, the Message Reader executes
-		-- a configuration cycle where is calculates its own detector number in 
+		-- DSD from DSU. If we receive a HI on DSD, we read a message from the message buffer
+		-- and drive the top eight bits of the message onto the downstream data buse. We
+		-- wait for further DSD pulses to drive the remaining bytes. If we never receive a 
+		-- HI on DSD, we return to the rest state when DMRC is unasserted by the base board
+		-- controller. Our message is still waiting to be read. If DMRC is unasserted for 
+		-- any reason after we read the message, and before we have transmitted all its
+		-- bytes, we return to the readout rest state and the message is discarded. When 
+		-- DMRC is asserted and we do not have a message waiting, we do not read a message 
+		-- from the buffer, but instead relay DSD to DSU and Data Bus Upstream (dbu) to Data 
+		-- Bus Downstrem (dbd). With Detector Module Configure (DMCFG) set, the Message Reader 
+		-- executes a configuration cycle where is calculates its own detector number in 
 		-- cooperation with all the other detectors on the daisy chain.
 		elsif rising_edge(CK) then
 			
