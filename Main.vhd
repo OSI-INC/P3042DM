@@ -437,26 +437,24 @@ begin
 							local_read := (FIFO_EMPTY = '0');
 						end if;
 					when 1 => 
-						next_state := 2;
-					when 2 => 
 						if (DSD = '1') then 
-							next_state := 3; 
+							next_state := 2; 
 							if local_read then RDMSG <= '1'; end if;
 						end if;
 						data_out := recalled_record(31 downto 24);
-					when 3 => 
-						if (DSD = '0') then next_state := 4; end if;
+					when 2 => 
+						if (DSD = '0') then next_state := 3; end if;
 						data_out := recalled_record(31 downto 24);
-					when 4 => 
-						if (DSD = '1') then next_state := 5; end if;
+					when 3 => 
+						if (DSD = '1') then next_state := 4; end if;
 						data_out := recalled_record(23 downto 16);
-					when 5 => 
-						if (DSD = '0') then next_state := 6; end if;
+					when 4 => 
+						if (DSD = '0') then next_state := 5; end if;
 						data_out := recalled_record(15 downto 8);						
-					when 6 => 
-						if (DSD = '1') then next_state := 7; end if;
+					when 5 => 
+						if (DSD = '1') then next_state := 6; end if;
 						data_out := recalled_record(7 downto 0);
-					when 7 => 
+					when 6 => 
 						if (DSD = '0') then next_state := 12; end if;
 						data_out := dm_num;
 					when others => 
