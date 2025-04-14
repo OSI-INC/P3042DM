@@ -1,5 +1,9 @@
 SCUBA, Version Diamond (64-bit) 3.12.1.454
+<<<<<<< HEAD
 Mon Apr 14 11:29:01 2025
+=======
+Mon Apr 14 11:32:25 2025
+>>>>>>> faster
   
 Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
 Copyright (c) 1995 AT&T Corp.   All rights reserved.
@@ -9,7 +13,11 @@ Copyright (c) 2002-2020 Lattice Semiconductor Corporation,  All rights reserved.
   
 BEGIN SCUBA Module Synthesis
   
+<<<<<<< HEAD
     Issued command   : C:\lscc\diamond\3.12\ispfpga\bin\nt64\scuba.exe -w -n PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -dram -type romblk -addr_width 8 -num_words 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem -memformat hex 
+=======
+    Issued command   : C:\lscc\diamond\3.12\ispfpga\bin\nt64\scuba.exe -w -n PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -dram -type romblk -addr_width 8 -num_words 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3042/p3042dm/pwmap.mem -memformat hex 
+>>>>>>> faster
     Circuit name     : PWMAP
     Module type      : rom
     Module Version   : 2.8
@@ -19,7 +27,11 @@ BEGIN SCUBA Module Synthesis
     Inputs       : Address[7:0]
     Outputs      : Q[7:0]
     I/O buffer       : not inserted
+<<<<<<< HEAD
     Memory file      : c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem
+=======
+    Memory file      : c:/kevan/a3042/p3042dm/pwmap.mem
+>>>>>>> faster
     EDIF output      : PWMAP.edn
     VHDL output      : PWMAP.vhd
     VHDL template    : PWMAP_tmpl.vhd

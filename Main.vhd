@@ -35,6 +35,9 @@
 
 -- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
 
+-- [14-APR-25] Accelerate message readout. Change TP4 to indicate XOR of
+-- upstream data rather than downstream.
+
 -- Global Constants 
 library ieee;  
 use ieee.std_logic_1164.all;
@@ -434,38 +437,24 @@ begin
 							local_read := (FIFO_EMPTY = '0');
 						end if;
 					when 1 => 
-						next_state := 2;
-					when 2 => 
 						if (DSD = '1') then 
-							next_state := 3; 
+							next_state := 2; 
 							if local_read then RDMSG <= '1'; end if;
 						end if;
 						data_out := recalled_record(31 downto 24);
-					when 3 => 
-						if (DSD = '0') then next_state := 4; end if;
+					when 2 => 
+						if (DSD = '0') then next_state := 3; end if;
 						data_out := recalled_record(31 downto 24);
-					when 4 => 
-						if (DSD = '1') then next_state := 5; end if;
+					when 3 => 
+						if (DSD = '1') then next_state := 4; end if;
 						data_out := recalled_record(23 downto 16);
+					when 4 => 
+						if (DSD = '0') then next_state := 5; end if;
+						data_out := recalled_record(15 downto 8);						
 					when 5 => 
-						if (DSD = '0') then next_state := 6; end if;
-						data_out := recalled_record(23 downto 16);						
+						if (DSD = '1') then next_state := 6; end if;
+						data_out := recalled_record(7 downto 0);
 					when 6 => 
-						if (DSD = '1') then next_state := 7; end if;
-						data_out := recalled_record(15 downto 8);
-					when 7 => 
-						if (DSD = '0') then next_state := 8; end if;
-						data_out := recalled_record(15 downto 8);
-					when 8 => 
-						if (DSD = '1') then next_state := 9; end if;
-						data_out := recalled_record(7 downto 0);
-					when 9 => 
-						if (DSD = '0') then next_state := 10; end if;
-						data_out := recalled_record(7 downto 0);
-					when 10 => 
-						if (DSD = '1') then next_state := 11; end if;
-						data_out := dm_num;
-					when 11 => 
 						if (DSD = '0') then next_state := 12; end if;
 						data_out := dm_num;
 					when others => 
@@ -639,5 +628,6 @@ begin
 	TP(1) <= INCOMING;
 	TP(2) <= RECEIVED;
 	TP(3) <= RDMSG;
-	TP(4) <= dbd(0) xor dbd(1) xor dbd(2) xor dbd(3) xor dbd(4) xor dbd(5) xor dbd(6) xor dbd(7);
+	TP(4) <= dbu(0) xor dbu(1) xor dbu(2) xor dbu(3) 
+	  xor dbu(4) xor dbu(5) xor dbu(6) xor dbu(7);
 end behavior;
