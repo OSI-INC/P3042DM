@@ -19,9 +19,9 @@
 				<BScanLen>1</BScanLen>
 				<BScanVal>0</BScanVal>
 			</Bypass>
-			<File>C:/Kevan/A3042/P3042DM3V1_1200ZE.jed</File>
-			<FileTime>01/04/23 19:30:49</FileTime>
-			<JedecChecksum>0xCDA9</JedecChecksum>
+			<File>C:/Kevan/A3042/P3042DM/impl1/P3042DM_impl1.jed</File>
+			<FileTime>04/14/25 11:33:25</FileTime>
+			<JedecChecksum>0xCE13</JedecChecksum>
 			<Operation>FLASH Erase,Program,Verify</Operation>
 			<Option>
 				<SVFVendor>JTAG STANDARD</SVFVendor>

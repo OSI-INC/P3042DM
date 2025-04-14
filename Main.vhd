@@ -35,6 +35,9 @@
 
 -- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
 
+-- [14-APR-25] Accelerate message readout. Change TP4 to indicate XOR of
+-- upstream data rather than downstream.
+
 -- Global Constants 
 library ieee;  
 use ieee.std_logic_1164.all;
