@@ -16,8 +16,8 @@ CoreRevision=2.8
 ModuleName=PWMAP
 SourceFormat=VHDL
 ParameterFileVersion=1.0
-Date=06/15/2021
-Time=14:16:40
+Date=04/14/2025
+Time=11:29:00
 
 [Parameters]
 Verilog=0
@@ -30,11 +30,11 @@ IO=0
 Addresses=256
 Data=8
 LUT=0
-MemFile=c:/kevan/a3038/p3038dm/pwmap.mem
+MemFile=c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem
 MemFormat=hex
 
 [FilesGenerated]
-c:/kevan/a3038/p3038dm/pwmap.mem=mem
+c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem=mem
 
 [Command]
-cmd_line= -w -n PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -dram -type romblk -addr_width 8 -num_words 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3042/p3042dm/pwmap.mem -memformat hex
+cmd_line= -w -n PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -dram -type romblk -addr_width 8 -num_words 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3038/p3038dm/p3038dm_pwmap.mem -memformat hex
