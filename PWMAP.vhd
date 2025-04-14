@@ -2,7 +2,7 @@
 -- Module  Version: 2.8
 --C:\lscc\diamond\3.12\ispfpga\bin\nt64\scuba.exe -w -n PWMAP -lang vhdl -synth synplify -bus_exp 7 -bb -arch xo2c00 -type rom -addr_width 8 -num_rows 256 -data_width 8 -outdata UNREGISTERED -memfile c:/kevan/a3042/p3042dm/pwmap.mem -memformat hex 
 
--- Mon Apr 14 11:32:25 2025
+-- Mon Apr 14 14:45:14 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
