@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiamondModule name="PWMAP" module="PWMAP" VendorName="Lattice Semiconductor Corporation" generator="IPexpress" date="2025 04 14 14:45:15.994" version="2.8" type="Module" synthesis="synplify" source_format="VHDL">
+  <Package>
+		<File name="" type="" modified="2025 04 14 14:45:15.800"/>
+		<File name="PWMAP.lpc" type="lpc" modified="2025 04 14 14:45:14.687"/>
+		<File name="PWMAP.vhd" type="top_level_vhdl" modified="2025 04 14 14:45:14.750"/>
+		<File name="PWMAP_tmpl.vhd" type="template_vhdl" modified="2025 04 14 14:45:14.750"/>
+		<File name="c:/kevan/a3042/p3042dm/pwmap.mem" type="mem" modified="2025 04 14 14:44:07.032"/>
+		<File name="tb_PWMAP_tmpl.vhd" type="testbench_vhdl" modified="2025 04 14 14:45:14.763"/>
+  </Package>
+</DiamondModule>
