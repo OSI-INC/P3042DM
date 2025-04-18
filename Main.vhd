@@ -35,8 +35,11 @@
 
 -- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
 
--- [18-APR-25] Accelerate message readout. Change TP4 to indicate XOR of upstream data rather
--- than downstream. Tested at sustained 23 kSPS.
+-- [14-APR-25] Accelerate message readout. Change TP4 to indicate XOR of
+-- upstream data rather than downstream.
+
+-- [18-APR-25] Standalone version. Turns on white light when it receives and indicates power
+-- with the blue light, but otherwise leaves the lights off.
 
 -- Global Constants 
 library ieee;  
@@ -537,16 +540,7 @@ begin
 	Status_Indicator : process (LCK) is
 	variable counter : integer range 0 to 15;	variable err_led_on : boolean;
 	begin
-		if rising_edge(LCK) then
-			counter := counter + 1;
-			err_led_on := false;
-		end if;
-		
-		err_led_on := 
-			(FIFO_FULL_ERR and (counter >= 0) and (counter <= 6))
-			or (LOCK = '0');
-			
-		LED(err_led_num) <= to_std_logic(err_led_on);
+		LED(err_led_num) <= '0';
 	end process;
 	
 	-- Indoming LED indicates message is being decoded now.
@@ -554,23 +548,7 @@ begin
 	variable counter : integer range 0 to 65535;
 	constant pulse_length : integer := 32768;
 	begin
-		if rising_edge(CK) then
-			if (counter = 0) then
-				if (INCOMING = '1') then
-					counter := 1;
-				else
-					counter := 0;
-				end if;
-				LED(inc_led_num) <='0';	
-			else	
-				if (counter = pulse_length) then
-					counter := 0;
-				else
-					counter := counter + 1;
-				end if;
-				LED(inc_led_num) <= '1';				
-			end if;
-		end if;
+		LED(inc_led_num) <= '0';				
 	end process;
 	
 	-- Received LED indicates complete message received.
