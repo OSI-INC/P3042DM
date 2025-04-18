@@ -35,8 +35,8 @@
 
 -- [25-DEC-22] Increase message buffer from 4 to 32 messages deep.
 
--- [14-APR-25] Accelerate message readout. Change TP4 to indicate XOR of
--- upstream data rather than downstream.
+-- [18-APR-25] Accelerate message readout. Change TP4 to indicate XOR of upstream data rather
+-- than downstream. Tested at sustained 23 kSPS.
 
 -- Global Constants 
 library ieee;  
